@@ -37,28 +37,12 @@ interface InventoryItem {
 }
 
 
-// define your modal style as a constant
-const style = {
-	position: 'absolute' as 'absolute',
-	top: '50%',
-	left: '50%',
-	transform: 'translate(-50%, -50%)',
-	width: 400,
-	bgcolor: 'white',
-	border: '2px solid #000',
-	boxShadow: 24, 
-	p: 4,
-	display: 'flex',
-	flexDirection: 'column',
-	gap: 3
-}
-
 
  export default function Home() { 
 	const [inventory, setInventory] = useState([])
-	const [open, setOpen] = useState(false)
-	const [itemName, setItemName] = useState('')
 	
+
+	// loads the inventory from firebase into the inventory defiend above 
 	const updateInventory = async () => {
 		try {
 			const snapshot: QuerySnapshot<DocumentData> = await getDocs(query(collection(firestore, 'inventory')))
@@ -74,7 +58,8 @@ const style = {
 		}
 	}
 
-
+	
+	// testing function 
 	const getLatestID = () => {
 		if (inventory.length === 0) {
 			console.log('Inventory is empty');
@@ -87,66 +72,33 @@ const style = {
 		return latestItem;
 	};
 
+
+
 	useEffect(() => {
 		updateInventory()
 	}, [])
 
 
-
-	// In your useEffect
-	useEffect(() => {
-		if (inventory.length > 0) {
-			const latest = getLatestID();
-			console.log("Latest ID:", latest);
-		}
-	}, [inventory]);
-
-
-
-	const updateItem = async(item: InventoryItem) => {
-		try {
-			const docRef: DocumentReference = query(collection(firestore,'inventory'))
-			const docSnap = await getDoc(docRef) 
-			
-			if (docSnap.exists()) {
-				const { quantity } = docSnap.data();
-				
-				if (quantity === 1) {
-					await setDoc (docRef, {quantity: quantity + 1})
-				}
-			} else {
-				await setDoc (docRef, {quanity: 1});
-			}
-			console.log ('update successful') 
-		
-		} catch (error) {
-			console.error ('updateItem() -- error'); 
-		}
-	} 
-
-
 	const [newItem, setNewItem] = useState({ id: '', name: '', quantity: '' });
 
-
-
-
-
-
-	const handleChange = (event) => {
-		const { name, value } = event.target;
-		setNewItem((prev) => ({ ...prev, [name]: value }));
-	};
-
-	const handleAddItem = () => {
-		setInventory((prev) => [...prev, { ...newItem, id: Date.now().toString() }]);
-		setNewItem({ id: '', name: '', quantity: '' }); // Reset form
-	};
-
+	// whatever value is in the search bar 
     const [searchTerm, setSearchTerm] = useState('');
 
-	// const filteredInventory = inventory.filter((item) =>
-	// 	item.name.toLowerCase().includes(searchTerm.toLowerCase())
-	// );
+
+	// used for filtering whatever is in search bar against the table
+	const [searchQuery, setSearchQuery] = useState('');
+
+	const handleSearchChange = (event) => {
+		const value = event.target.value;
+    	setSearchTerm(value); // Update the state
+		setSearchQuery(event.target.value);
+	};
+
+	// the filtering is done here. empty search bar displays whole table 
+	const filteredInventory = inventory.filter((item) =>
+		item.name.toLowerCase().includes(searchQuery.toLowerCase())
+	);
+
 
 	// item addition form is initially invisible 
 	const [showItemForm, setShowItemForm] = useState(false)
@@ -167,14 +119,14 @@ const style = {
 		setShowItemForm(false)
 	}
 
+	// values for adding a new item 
 	const [name, setName] = useState('');
 	const [quantity, setQuantity] = useState('');
 
-
+	
+	// adding a new document to database in reaction to button
 	const handleSubmit = async () => {
-
 		const date = new Date().toISOString(); 
-
 		const formattedDate =  date.slice(0,-5).replace('T',' ');
 
 		// Logic to handle the form submission
@@ -197,6 +149,7 @@ const style = {
 	};
 
 
+	// mapping each button inside table row to function  
 	const handleButtonClick = async (action, row) => {
 		// `action` can be "increase", "decrease", or "remove"
 		// `row` is the current row data
@@ -209,14 +162,15 @@ const style = {
 			const docSnap = await getDoc(docRef)	
 			console.log("Doc Snap: ", docSnap); 
 			setDoc(docRef, {name: row.name, quantity: row.quantity + 1});
-		} else if (action === 'decrease') {
+		} 
+		else if (action === 'decrease') {
 			const updatedQuantity = row.quantity - 1 >= 0 ? row.quantity - 1 : row.quantity;
-
 			const docRef = doc(collection(firestore, 'inventory'), row.id)
 			const docSnap = await getDoc(docRef)	
 			console.log("Doc Snap: ", docSnap); 
 			setDoc(docRef, {name: row.name, quantity: updatedQuantity });
-		} else if (action === 'remove') {
+		} 
+		else if (action === 'remove') {
 		 	const docRef = doc(collection(firestore, 'inventory'), row.id)
 			const docSnap = await getDoc(docRef)	
 			console.log("Doc Snap: ", docSnap); 
@@ -224,6 +178,7 @@ const style = {
 		}
 		await updateInventory(); 
 	};
+
 
 
 	return( 
@@ -249,20 +204,49 @@ const style = {
 			   >
 
 				   <div className={styles.headingTitle}> 
-				   <p> Hello world </p> 
+				   		<p> Inventory Management </p> 
 				   </div>  
 
 
 				   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 2, minWidth: 650 }}>
 				   <TextField
+
 				   label="Search"
 				   variant="outlined"
 				   value={searchTerm}
-				   onChange={(e) => setSearchTerm(e.target.value)}
+				   onChange={handleSearchChange}
 				   sx={{ flex: 1 }} // Make the TextField take up available space
 				   />
-				   <Button variant="contained" color="primary" onClick={handleAddItemClick}>Add Item</Button>
-				   <Button variant="outlined" color="secondary" onClick={handleClear}>Clear</Button>
+
+
+				   <Button variant="contained" 
+				   sx={{ 
+					   backgroundColor: 'tomato', 
+					   width: '100px', 
+					   fontSize: '0.8rem', 
+					   padding: '10px 20px', 	
+					   border: '2px solid white',
+					   borderRadius: '8px',       
+					   backgroundColor: 'tomato'
+				   }}
+				   onClick={handleAddItemClick}>Add Item
+				   </Button>
+
+
+				   <Button variant="outlined" 
+				   sx={{ 
+					   backgroundColor: 'tomato', 
+					   width: '100px', 
+					   fontSize: '0.8rem', 
+					   color: 'white',
+					   padding: '10px 20px', 	
+					   border: '2px solid white',
+					   borderRadius: '8px',       
+					   backgroundColor: 'tomato'
+				   }}
+				   onClick={handleClear}>Clear
+				   </Button>
+
 				   </Box>
 
 				   {showItemForm && ( 
@@ -282,42 +266,67 @@ const style = {
 					   onChange={(e) => setQuantity(e.target.value)}
 					   sx={{ flex: 1 }}
 					   />
-					   <Button variant="contained" color="primary" onClick={handleSubmit}>Submit</Button>
+					   <Button variant="contained" 
+						   sx={{ 
+							   backgroundColor: 'tomato', 
+							   width: '100px', 
+							   fontSize: '0.8rem', 
+							   color: 'white',
+							   padding: '10px 20px', 	
+							   border: '2px solid white',
+							   borderRadius: '8px',       
+							   backgroundColor: 'tomato'
+						   }}
+						   onClick={handleSubmit}>Submit</Button>
 					   </Box>
 				   )}
 
 
 				   <TableContainer component={Paper}  sx={{ maxWidth: 800 }}  >
-					   <Table sx={{ minWidth: 650 }} aria-label="simple table">
+					   <Table 
+						sx={{ minWidth: 650,
+							border: '2px solid white',
+							borderRadius: '8px',       
+							backgroundColor: 'tomato', 
+						}} 
+					   	>
 						   <TableHead>
 							   <TableRow   sx={{ margin: 2 }} >
-								   <TableCell>Item Name </TableCell>
-								   <TableCell align="right">Timestamp</TableCell>
-								   <TableCell align="right">Quantity</TableCell>
-								   <TableCell align="right"></TableCell>
-								   <TableCell align="right"></TableCell>
-								   <TableCell align="right"></TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }}>Item Name </TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }} align="right">Timestamp</TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }} align="right">Quantity</TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }} align="right"></TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }} align="right"></TableCell>
+								   <TableCell sx={{ color: '#ffffff', fontSize: '1.3rem' }} align="right"></TableCell>
 							   </TableRow>
 						   </TableHead>
 						   <TableBody>
 
 
-						   {inventory.map((row) => (
+						   {filteredInventory.map((row) => (
 							   <TableRow
 							   key={row.name}
 							   sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
 							   >
-							   <TableCell component="th" scope="row">
+							   <TableCell component="th" scope="row"  sx={{ color: '#ffffff', fontSize: '1rem'}} >
 							   {row.name}
 							   </TableCell>
-							   <TableCell align="right">{row.id}</TableCell>
-							   <TableCell align="right">{row.quantity}</TableCell>
+							   <TableCell align="right"  sx={{ color: '#ffffff', fontSize: '1rem'}} >{row.id}</TableCell>
+							   <TableCell align="right"  sx={{ color: '#ffffff', fontSize: '1rem'}}  >{row.quantity}</TableCell>
 
 
 							   <TableCell align="right" sx={{ width: '40px' }}>
 							   <Button
 							   variant="contained"
-							   sx={{ width: '50px', fontSize: '0.7rem', padding: '4px 8px' }}
+							   sx={{ 
+								   backgroundColor: 'tomato', 
+								   width: '50px', 
+								   fontSize: '0.65rem', 
+								   padding: '5px 10px',
+								   border: '2px solid white',
+								   borderRadius: '8px',       
+								   backgroundColor: 'tomato'  
+							   }}
 							   onClick={() => handleButtonClick('increase', row)}
 							   >
 							   Increase
@@ -326,7 +335,15 @@ const style = {
 							   <TableCell align="right" sx={{ width: '40px' }}>
 							   <Button
 							   variant="contained"
-							   sx={{ width: '50px', fontSize: '0.7rem', padding: '4px 8px' }}
+							   sx={{ 
+								   backgroundColor: 'tomato', 
+								   width: '50px', 
+								   fontSize: '0.65rem', 
+								   padding: '5px 10px',
+								   border: '2px solid white',
+								   borderRadius: '8px',       
+								   backgroundColor: 'tomato'  
+							   }}
 							   onClick={() => handleButtonClick('decrease', row)}
 							   >
 							   Decrease
@@ -335,7 +352,15 @@ const style = {
 							   <TableCell align="right" sx={{ width: '40px' }}>
 							   <Button
 							   variant="contained"
-							   sx={{ width: '50px', fontSize: '0.7rem', padding: '4px 8px' }}
+							   sx={{ 
+								   backgroundColor: 'tomato', 
+								   width: '50px', 
+								   fontSize: '0.65rem', 
+								   padding: '5px 10px', 	
+								   border: '2px solid white',
+								   borderRadius: '8px',       
+								   backgroundColor: 'tomato'
+							   }}
 							   onClick={() => handleButtonClick('remove', row)}
 							   >
 							   Remove
